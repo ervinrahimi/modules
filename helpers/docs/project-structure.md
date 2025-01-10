@@ -214,5 +214,5 @@ This file handles SurrealDB integration with a robust connection setup.
 ---
 
 <div align="center">
-    <p>Powered by <strong>Future Co</strong></p>
+    <p>Powered by <strong>Future Wings</strong></p>
 </div>

@@ -1,34 +1,95 @@
-import { NextResponse } from 'next/server';
-import sdb from '@/db/surealdb';
+//app/api/blog/route.js
+import { NextResponse } from "next/server";
+import sdb from "@/db/surealdb";
+import { RecordId } from "surrealdb";
+import { PostCreateSchema } from "@/schemas/postSchemas";
 
 /**
- * API Endpoint for managing the "example" table in SurrealDB.
- * 
- * - `GET`: Fetch all records.
- * - `POST`: Create a new record.
+ * Handler to create a new post (POST).
+ * Endpoint: POST /api/blog
  */
-
-// Fetch all records
-export async function GET() {
+export async function POST(request) {
   try {
+    // Connect to SurrealDB
     const db = await sdb();
 
-    // Query all records from the "example" table
-    const result = await db.query('SELECT * FROM example;');
-    const data = result[0]?.result || [];
+    // Parse JSON body
+    const body = await request.json();
 
+    // Validate input using Zod schema
+    const parsedData = PostCreateSchema.parse(body);
+
+    // Extract fields after validation
+    const { title, slug, content, author } = parsedData;
+
+    // Extract author ID from "user:xyz"
+    const authorId = author.replace("user:", "");
+    if (!authorId) {
+      return NextResponse.json(
+        {
+          error: {
+            code: "validation_error",
+            message: "Author ID is invalid or missing.",
+          },
+        },
+        { status: 400 }
+      );
+    }
+
+    // Check if the author exists
+    const authorExists = await db.select(new RecordId("user", authorId));
+    if (!authorExists || authorExists.length === 0) {
+      return NextResponse.json(
+        {
+          error: {
+            code: "author_not_found",
+            message: `Author with ID user:${authorId} does not exist.`,
+          },
+        },
+        { status: 404 }
+      );
+    }
+
+    // Prepare data for the new post
+    const postData = {
+      title,
+      slug,
+      content,
+      authorId: new RecordId("user", authorId),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    // Insert the new post into the database
+    const [createdPost] = await db.insert("post", postData);
+
+    // Return success response
     return NextResponse.json(
-      { message: 'Records fetched successfully.', data },
-      { status: 200 }
+      { message: "Post created successfully.", data: createdPost },
+      { status: 201 }
     );
   } catch (error) {
-    console.error('Error fetching records:', error);
+    // If it's a Zod error, it will have 'issues'
+    if (error.issues) {
+      return NextResponse.json(
+        {
+          error: {
+            code: "validation_error",
+            message: "Failed Zod validation.",
+            details: error.issues,
+          },
+        },
+        { status: 400 }
+      );
+    }
 
+    // Handle other errors
+    console.error("Error creating post:", error);
     return NextResponse.json(
       {
         error: {
-          code: 'fetch_records_error',
-          message: 'An error occurred while fetching records from the database.',
+          code: "create_post_error",
+          message: "Failed to create post.",
           details: error.message,
         },
       },
@@ -37,44 +98,43 @@ export async function GET() {
   }
 }
 
-// Create a new record
-export async function POST(request) {
+/**
+ * Handler to get all posts or a specific post by ID (GET).
+ * Endpoint: GET /api/blog (for all posts)
+ *           GET /api/blog?id=xyz (for a single post)
+ */
+export async function GET(request) {
   try {
     const db = await sdb();
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
 
-    // Parse the request body
-    const body = await request.json();
-    if (!body || typeof body !== 'object') {
-      return NextResponse.json(
-        {
-          error: {
-            code: 'invalid_input',
-            message: 'The request body must be a valid JSON object.',
+    let result;
+    if (id) {
+      result = await db.select(`post:${id}`);
+      if (!result || result.length === 0) {
+        return NextResponse.json(
+          {
+            error: {
+              code: "not_found",
+              message: "Post not found.",
+            },
           },
-        },
-        { status: 400 }
-      );
+          { status: 404 }
+        );
+      }
+    } else {
+      result = await db.select("post");
     }
 
-    // Insert the new record into the "example" table
-    const result = await db.query('INSERT INTO example CONTENT $data;', { data: body });
-    const createdRecord = result[0]?.result;
-
-    return NextResponse.json(
-      {
-        message: 'Record created successfully.',
-        data: createdRecord,
-      },
-      { status: 201 }
-    );
+    return NextResponse.json(result, { status: 200 });
   } catch (error) {
-    console.error('Error creating record:', error);
-
+    console.error("Error fetching posts:", error);
     return NextResponse.json(
       {
         error: {
-          code: 'create_record_error',
-          message: 'An error occurred while creating the record.',
+          code: "internal_server_error",
+          message: "Failed to fetch posts.",
           details: error.message,
         },
       },

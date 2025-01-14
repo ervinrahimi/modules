@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import sdb from "@/db/surealdb";
 import { RecordId } from "surrealdb";
-import { PostCreateSchema } from "@/schemas/postSchemas";
+import { PostCreateSchema } from "@/schemas/zod/postSchemas";
 
 /**
  * Handler to create a new post (POST).
@@ -84,7 +84,7 @@ export async function POST(request) {
     }
 
     // Handle other errors
-    console.error("Error creating post:", error);
+
     return NextResponse.json(
       {
         error: {
@@ -129,7 +129,6 @@ export async function GET(request) {
 
     return NextResponse.json(result, { status: 200 });
   } catch (error) {
-    console.error("Error fetching posts:", error);
     return NextResponse.json(
       {
         error: {

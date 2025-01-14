@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server'
-import sdb from '@/db/surealdb'
+import { NextResponse } from "next/server";
+import sdb from "@/db/surealdb";
 
 /**
  * API Handler to define the example table in SurrealDB.
@@ -13,34 +13,32 @@ import sdb from '@/db/surealdb'
 export async function POST() {
   try {
     // Get the SurrealDB instance
-    const db = await sdb()
+    const db = await sdb();
 
     // Execute the SurrealQL query to define the example table
-    await db.query(`DEFINE TABLE example;`)
+    await db.query(`DEFINE TABLE example;`);
 
     // Return a structured success response
     return NextResponse.json(
       {
-        message: 'Example table created successfully.',
+        message: "Example table created successfully.",
       },
       {
         status: 201,
       }
-    )
+    );
   } catch (error) {
-    console.error('Error creating example table:', error)
-
     // Return a structured error response
     return NextResponse.json(
       {
         error: {
-          code: 'internal_server_error',
+          code: "internal_server_error",
           message: 'Failed to create "example" table.',
         },
       },
       {
         status: 500,
       }
-    )
+    );
   }
 }

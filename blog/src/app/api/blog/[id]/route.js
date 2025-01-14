@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import sdb from "@/db/surealdb";
 import { RecordId } from "surrealdb";
-import { PostUpdateSchema } from "@/schemas/postSchemas";
+import { PostUpdateSchema } from "@/schemas/zod/postSchemas";
 
 /**
  * Handler to update a specific post (PUT).
@@ -98,7 +98,7 @@ export async function PUT(request, context) {
     }
 
     // Handle other errors
-    console.error("Error updating post:", error);
+
     return NextResponse.json(
       {
         error: {
@@ -152,7 +152,6 @@ export async function DELETE(request, context) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("Error deleting post:", error);
     return NextResponse.json(
       {
         error: {
